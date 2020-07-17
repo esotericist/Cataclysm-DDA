@@ -48,23 +48,23 @@ class text_pane
 {
     public:
         enum cursor_style {
-            CURSOR_HIDDEN,
-            CURSOR_HIGHLIGHTED,
-            CURSOR_BRACKETED
+            cursor_hidden,
+            cursor_highlighted,
+            cursor_bracketed
         };
 
         enum scrollbar_pos {
-            SCROLLBAR_LEFT,
-            SCROLLBAR_RIGHT,
-            SCROLLBAR_NONE
+            scrollbar_left,
+            scrollbar_right,
+            scrollbar_none
         };
 
         enum entry_flags {
-            ENTRY_DEFAULT = 0,
-            ENTRY_SKIPPED = ( 1 << 0 ),
-            ENTRY_DARKENED = ( 1 << 1 ),
-            ENTRY_HIGHLIGHTED = ( 1 << 2 ),
-            ENTRY_BRACKETED = ( 1 << 3 )
+            entry_default = 0,
+            entry_skipped = ( 1 << 0 ),
+            entry_darkened = ( 1 << 1 ),
+            entry_highlithed = ( 1 << 2 ),
+            entry_bracketed = ( 1 << 3 )
         };
 
 
@@ -105,8 +105,8 @@ class text_pane
         size_t cursor_pos_ = 0;
         size_t folded_line_count_ = 0;
         nc_color cursor_color_;
-        cursor_style cursor_style_ = CURSOR_HIDDEN;
-        scrollbar_pos scrollbar_pos_ = SCROLLBAR_LEFT;
+        cursor_style cursor_style_ = cursor_hidden;
+        scrollbar_pos scrollbar_pos_ = scrollbar_left;
         bool wrap_cursor_ = false;
 };
 

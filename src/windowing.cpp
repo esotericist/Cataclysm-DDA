@@ -50,7 +50,7 @@ void text_pane::set_simple_text( const std::string &text )
         thisentry.content_.emplace_back( k );
         if( k == "" ) {
             if( i++ % 4 ) {
-                thisentry.flags = entry_flags::ENTRY_DARKENED;
+                thisentry.flags = entry_flags::entry_darkened;
             }
             output_dataset_.emplace_back( thisentry );
             thisentry.content_.clear();
@@ -165,19 +165,19 @@ void text_pane::draw( const nc_color &base_color )
     size_t list_line = 0;
     for( size_t current_entry = first_entry; current_entry <= last_entry; current_entry++ ) {
         nc_color color = base_color;
-        if( output_dataset_[current_entry].flags & entry_flags::ENTRY_DARKENED ) {
+        if( output_dataset_[current_entry].flags & entry_flags::entry_darkened ) {
             color = c_dark_gray;
-            if( current_entry == cursor_pos_ && cursor_style_ == CURSOR_HIGHLIGHTED ) {
+            if( current_entry == cursor_pos_ && cursor_style_ == cursor_highlighted ) {
                 color = h_dark_gray;
             }
-        } else if( output_dataset_[current_entry].flags & entry_flags::ENTRY_HIGHLIGHTED ) {
+        } else if( output_dataset_[current_entry].flags & entry_flags::entry_highlithed ) {
             color = c_yellow;
-            if( current_entry == cursor_pos_ && cursor_style_ == CURSOR_HIGHLIGHTED ) {
+            if( current_entry == cursor_pos_ && cursor_style_ == cursor_highlighted ) {
                 color = h_yellow;
             }
         } else {
             color = c_white;
-            if( current_entry == cursor_pos_ && cursor_style_ == CURSOR_HIGHLIGHTED ) {
+            if( current_entry == cursor_pos_ && cursor_style_ == cursor_highlighted ) {
                 color = h_white;
             }
         }
@@ -210,20 +210,20 @@ void text_pane::draw( const nc_color &base_color )
 
 void text_pane::set_cursor_hidden()
 {
-    cursor_style_ = CURSOR_HIDDEN;
+    cursor_style_ = cursor_hidden;
     cursor_text_ = std::pair<std::string, std::string>( "", "" );
 }
 
 void text_pane::set_cursor_highlighted()
 {
-    cursor_style_ = CURSOR_HIGHLIGHTED;
+    cursor_style_ = cursor_highlighted;
     cursor_text_ = std::pair<std::string, std::string>( "", "" );
 }
 
 void text_pane::set_cursor_bracketed( std::string prefix, std::string suffix,
                                       const nc_color &color )
 {
-    cursor_style_ = CURSOR_BRACKETED;
+    cursor_style_ = cursor_bracketed;
     cursor_text_ = std::pair<std::string, std::string>( prefix, suffix );
     cursor_color_ = color;
 }
@@ -232,7 +232,7 @@ int text_pane::text_width()
 {
     int windowwidth = getmaxx( w_ );
     int cursorwidth = utf8_width( cursor_text_.first, true ) + utf8_width( cursor_text_.second, true );
-    int adj = scrollbar_pos_ == text_pane::SCROLLBAR_NONE ? 0 : 1;
+    int adj = scrollbar_pos_ == text_pane::scrollbar_none ? 0 : 1;
     return windowwidth - adj - cursorwidth;
 }
 
