@@ -120,8 +120,8 @@ void text_pane::draw( const nc_color &base_color )
 
     const int height = getmaxy( w_ );
 
-    int left_margin = utf8_width( cursor_text_.first ) + 1;
-    int right_margin = getmaxx( w_ ) - utf8_width( cursor_text_.second );
+    int left_margin = utf8_width( cursor_text_.first, true ) + 1;
+    int right_margin = getmaxx( w_ ) - utf8_width( cursor_text_.second, true );
     nc_color cursor_color = cursor_color_;
 
     std::vector<int> entry_lengths;
