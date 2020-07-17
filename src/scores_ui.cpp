@@ -17,6 +17,7 @@
 #include "translations.h"
 #include "ui.h"
 #include "ui_manager.h"
+#include "windowing.h"
 
 static std::string get_achievements_text( const achievements_tracker &achievements,
         bool use_conducts )
@@ -98,7 +99,8 @@ void show_scores_ui( const achievements_tracker &achievements, stats_tracker &st
     ctxt.register_action( "HELP_KEYBINDINGS" );
 
     catacurses::window w_view;
-    scrolling_text_view view( w_view );
+    text_pane view( w_view );
+    view.set_cursor_bracketed( " > ", " < " );
     bool new_tab = true;
 
     ui_adaptor ui;
@@ -132,16 +134,16 @@ void show_scores_ui( const achievements_tracker &achievements, stats_tracker &st
         if( new_tab ) {
             switch( tab ) {
                 case tab_mode::achievements:
-                    view.set_text( get_achievements_text( achievements, false ) );
+                    view.set_simple_text( get_achievements_text( achievements, false ) );
                     break;
                 case tab_mode::conducts:
-                    view.set_text( get_achievements_text( achievements, true ) );
+                    view.set_simple_text( get_achievements_text( achievements, true ) );
                     break;
                 case tab_mode::scores:
-                    view.set_text( get_scores_text( stats ) );
+                    view.set_simple_text( get_scores_text( stats ) );
                     break;
                 case tab_mode::kills:
-                    view.set_text( kills.get_kills_text() );
+                    view.set_simple_text( kills.get_kills_text() );
                     break;
                 case tab_mode::num_tabs:
                     assert( false );
@@ -165,9 +167,9 @@ void show_scores_ui( const achievements_tracker &achievements, stats_tracker &st
             }
             new_tab = true;
         } else if( action == "DOWN" ) {
-            view.scroll_down();
+            view.cursor_down();
         } else if( action == "UP" ) {
-            view.scroll_up();
+            view.cursor_up();
         } else if( action == "PAGE_DOWN" ) {
             view.page_down();
         } else if( action == "PAGE_UP" ) {
