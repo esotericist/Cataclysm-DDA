@@ -140,12 +140,12 @@ void text_pane::draw( const nc_color &base_color )
     int start_offset = calc_start_pos( cur_offset, w_height, folded_line_count_ );
     int end_offset = start_offset + w_height;
 
-    size_t first_entry = std::distance( entry_offsets.begin(), std::lower_bound( entry_offsets.begin(),
-                                        entry_offsets.end(), start_offset ) );
+    size_t first_entry = std::distance( entry_offsets.begin(), std::upper_bound( entry_offsets.begin(),
+                                        entry_offsets.end(), start_offset ) ) - 1;
     size_t last_entry = std::distance( entry_offsets.begin(), std::lower_bound( entry_offsets.begin(),
                                        entry_offsets.end(), end_offset ) ) - 1;
-    if( last_entry > entry_offsets.size() - 1 ) {
-        last_entry = entry_offsets.size() - 1;
+    if( last_entry >= output_dataset_.size() ) {
+        last_entry = output_dataset_.size() - 1;
     }
 
     if( max_offset() > 0 ) {
@@ -183,13 +183,16 @@ void text_pane::draw( const nc_color &base_color )
         }
         std::vector<std::string> &entry_text = output_dataset_[current_entry].content_;
         size_t start_line = 0;
-        size_t end_line = entry_text.size();
+        size_t end_line = entry_text.empty() ? 0 : entry_text.size() -1;
         if( current_entry == first_entry ) {
             start_line = entry_offsets[current_entry] - start_offset;
         }
         if( current_entry == ( last_entry ) ) {
             if( entry_offsets[current_entry] < end_offset ) {
                 end_line = end_offset - entry_offsets[current_entry];
+                if( end_line >= entry_text.size() ) {
+                    end_line = entry_text.size() -1;
+                }
             } else {
                 end_line = 0;
             }
