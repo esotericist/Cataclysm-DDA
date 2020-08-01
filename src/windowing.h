@@ -90,24 +90,24 @@ class text_pane
     private:
         int text_width();
         int num_lines();
-        int max_offset();
+        size_t max_offset();
 
         struct entry {
             std::vector<std::string> content_;
             entry_flags flags;
+            size_t folded_line_count;
         };
 
         catacurses::window &w_;
-        std::pair<std::string, std::string> cursor_text_ = { " ", " " };
-        std::vector<std::string> input_entries_;
-        std::vector<entry> output_dataset_;
-        size_t offset_ = 0;
+        std::pair<std::string, std::string> cursor_text_ = { "", "" };
+        std::vector<std::string> output_strings_;
+        std::vector<entry> input_dataset_;
         size_t cursor_pos_ = 0;
-        size_t folded_line_count_ = 0;
         nc_color cursor_color_;
         cursor_style cursor_style_ = cursor_hidden;
         scrollbar_pos scrollbar_pos_ = scrollbar_left;
         bool wrap_cursor_ = false;
+        int cursor_offset_ = 0;
 };
 
 #endif // CATA_SRC_WINDOWING_H

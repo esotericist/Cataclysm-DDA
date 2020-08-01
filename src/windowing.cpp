@@ -42,24 +42,30 @@
 void text_pane::set_simple_text( const std::string &text )
 {
     cursor_pos_ = 0;
-    input_entries_ = foldstring( text, text_width() );
-    output_dataset_.clear();
+    input_dataset_.clear();
+    output_strings_.clear();
+    std::vector<std::string> input_entries = foldstring( text, text_width() );
+
     text_pane::entry thisentry;
     size_t i = 0;
-    for( const auto &k : input_entries_ ) {
+    for( const auto &k : input_entries ) {
         thisentry.content_.emplace_back( k );
+        output_strings_.emplace_back( k );
         if( k == "" ) {
             if( i++ % 4 ) {
                 thisentry.flags = entry_flags::entry_darkened;
+                i = 0;
             }
-            output_dataset_.emplace_back( thisentry );
+            thisentry.folded_line_count = thisentry.content_.size();
+            input_dataset_.emplace_back( thisentry );
             thisentry.content_.clear();
         }
     }
     if( !thisentry.content_.empty() ) {
-        output_dataset_.emplace_back( thisentry );
+        input_dataset_.emplace_back( thisentry );
     }
-    folded_line_count_ = input_entries_.size();
+
+
 }
 
 void text_pane::cursor_up( size_t lines )
@@ -73,45 +79,52 @@ void text_pane::cursor_up( size_t lines )
 
 void text_pane::cursor_down( size_t lines )
 {
-    if( cursor_pos_ + lines < output_dataset_.size() - 1 ) {
+    if( cursor_pos_ + lines < input_dataset_.size() - 1 ) {
         cursor_pos_ += lines;
     } else {
-        cursor_pos_ = output_dataset_.size() - 1;
+        cursor_pos_ = input_dataset_.size() - 1;
     }
 }
 
 void text_pane::page_up()
 {
-    offset_ = std::max<size_t>( 0, offset_ - getmaxy( w_ ) );
+    cursor_offset_ = std::max<size_t>( 0, cursor_offset_ - getmaxy( w_ ) );
 }
 
 void text_pane::page_down()
 {
-    offset_ = std::min<size_t>( max_offset(), offset_ + getmaxy( w_ ) );
+    cursor_offset_ = std::min<size_t>( max_offset(), cursor_offset_ + getmaxy( w_ ) );
 }
 
 
-int calc_start_pos( const int iCurrentLine, const int iContentHeight,
-                    const int iNumEntries )
+void calc_start_pos( int &iStartPos, const int iCurrentLine, const int iContentHeight,
+                     const int iNumEntries, const int entrysize )
 {
-    int iStartPos = 0;
+    if( entrysize ) {
+
+    }
     if( iNumEntries <= iContentHeight ) {
         iStartPos = 0;
     } else if( get_option<bool>( "MENU_SCROLL" ) ) {
-        iStartPos = iCurrentLine - ( iContentHeight - 1 ) / 2;
+        iStartPos = iCurrentLine - ( iContentHeight - 1 ) / 2  + ( entrysize / 2 );
         if( iStartPos < 0 ) {
             iStartPos = 0;
         } else if( iStartPos + iContentHeight > iNumEntries ) {
-            iStartPos = iNumEntries - iContentHeight;
+            iStartPos = iNumEntries -  iContentHeight;
         }
     } else {
         if( iCurrentLine < iStartPos ) {
-            iStartPos = iCurrentLine;
-        } else if( iCurrentLine >= iStartPos + iContentHeight ) {
-            iStartPos = 1 + iCurrentLine - iContentHeight;
+            iStartPos = iCurrentLine - 2;
+        } else if( iCurrentLine >= iStartPos + ( iContentHeight - entrysize ) ) {
+            iStartPos =  iCurrentLine - ( iContentHeight - entrysize );
         }
     }
-    return iStartPos;
+    if( iStartPos < 0 ) {
+        iStartPos = 0;
+    }
+    if( iStartPos > iNumEntries ) {
+        iStartPos = iNumEntries;
+    }
 }
 
 void text_pane::draw( const nc_color &base_color )
@@ -125,8 +138,8 @@ void text_pane::draw( const nc_color &base_color )
     nc_color cursor_color = cursor_color_;
 
     std::vector<int> entry_lengths;
-    for( const auto &e : output_dataset_ ) {
-        entry_lengths.emplace_back( e.content_.size() );
+    for( const auto &e : input_dataset_ ) {
+        entry_lengths.emplace_back( e.folded_line_count );
     }
     std::vector<int> entry_offsets = { 0 };
     std::partial_sum( entry_lengths.begin(), entry_lengths.end(), std::back_inserter( entry_offsets ) );
@@ -135,23 +148,19 @@ void text_pane::draw( const nc_color &base_color )
     int cur_offset = entry_offsets[ cursor_pos_ ] + ( output_dataset_[cursor_pos_].content_.size() /
                      2 );
     */
-    int cur_offset = entry_offsets[ cursor_pos_ ];
+    size_t cur_offset = entry_offsets[ cursor_pos_ ];
     size_t w_height = getmaxy( w_ );
-    int start_offset = calc_start_pos( cur_offset, w_height, folded_line_count_ );
-    int end_offset = start_offset + w_height;
-
-    size_t first_entry = std::distance( entry_offsets.begin(), std::upper_bound( entry_offsets.begin(),
-                                        entry_offsets.end(), start_offset ) ) - 1;
-    size_t last_entry = std::distance( entry_offsets.begin(), std::lower_bound( entry_offsets.begin(),
-                                       entry_offsets.end(), end_offset ) ) - 1;
-    if( last_entry >= output_dataset_.size() ) {
-        last_entry = output_dataset_.size() - 1;
+    calc_start_pos( cursor_offset_, cur_offset, w_height, output_strings_.size(),
+                    input_dataset_[cursor_pos_].folded_line_count );
+    size_t end_offset = cursor_offset_ + w_height;
+    if( end_offset > max_offset() ) {
+        end_offset = max_offset();
     }
 
     if( max_offset() > 0 ) {
         scrollbar().
-        content_size( folded_line_count_ ).
-        viewport_pos( start_offset ).
+        content_size( output_strings_.size() ).
+        viewport_pos( cursor_offset_ ).
         viewport_size( height ).
         scroll_to_last( false ).
         apply( w_ );
@@ -162,15 +171,49 @@ void text_pane::draw( const nc_color &base_color )
         }
     }
 
+    /*
+    size_t first_entry = std::distance( entry_offsets.begin(), std::upper_bound( entry_offsets.begin(),
+                                        entry_offsets.end(), start_offset ) ) - 1;
+    size_t last_entry = std::distance( entry_offsets.begin(), std::lower_bound( entry_offsets.begin(),
+                                       entry_offsets.end(), end_offset ) ) - 1;
+
+
+    if( last_entry >= input_dataset_.size() ) {
+        last_entry = input_dataset_.size() - 1;
+    }
+
+    */
+
+    size_t display_line = 0;
+    for( size_t current_line = cursor_offset_; current_line <= end_offset; current_line++ ) {
+        if( display_line >= w_height ) {
+            continue;
+        }
+        nc_color color = base_color;
+        size_t current_entry = std::distance( entry_offsets.begin(),
+                                              std::upper_bound( entry_offsets.begin(), entry_offsets.end(), current_line ) ) - 1;
+
+        if( current_entry == cursor_pos_ ) {
+            print_colored_text( w_, point( 1, display_line ), cursor_color, cursor_color_, cursor_text_.first );
+            print_colored_text( w_, point( right_margin, display_line ), cursor_color, cursor_color,
+                                cursor_text_.second );
+        }
+        print_colored_text( w_, point( left_margin, display_line ), color, color,
+                            output_strings_[current_line] );
+        display_line += 1;
+
+    }
+
+    /*
     size_t list_line = 0;
     for( size_t current_entry = first_entry; current_entry <= last_entry; current_entry++ ) {
         nc_color color = base_color;
-        if( output_dataset_[current_entry].flags & entry_flags::entry_darkened ) {
+        if( input_dataset_[current_entry].flags & entry_flags::entry_darkened ) {
             color = c_dark_gray;
             if( current_entry == cursor_pos_ && cursor_style_ == cursor_highlighted ) {
                 color = h_dark_gray;
             }
-        } else if( output_dataset_[current_entry].flags & entry_flags::entry_highlithed ) {
+        } else if( input_dataset_[current_entry].flags & entry_flags::entry_highlithed ) {
             color = c_yellow;
             if( current_entry == cursor_pos_ && cursor_style_ == cursor_highlighted ) {
                 color = h_yellow;
@@ -181,9 +224,9 @@ void text_pane::draw( const nc_color &base_color )
                 color = h_white;
             }
         }
-        std::vector<std::string> &entry_text = output_dataset_[current_entry].content_;
+        std::vector<std::string> &entry_text = input_dataset_[current_entry].content_;
         size_t start_line = 0;
-        size_t end_line = entry_text.empty() ? 0 : entry_text.size() -1;
+        size_t end_line = entry_text.empty() ? 0 : entry_text.size() - 1;
         if( current_entry == first_entry ) {
             start_line = entry_offsets[current_entry] - start_offset;
         }
@@ -191,7 +234,7 @@ void text_pane::draw( const nc_color &base_color )
             if( entry_offsets[current_entry] < end_offset ) {
                 end_line = end_offset - entry_offsets[current_entry];
                 if( end_line >= entry_text.size() ) {
-                    end_line = entry_text.size() -1;
+                    end_line = entry_text.size() - 1;
                 }
             } else {
                 end_line = 0;
@@ -207,6 +250,7 @@ void text_pane::draw( const nc_color &base_color )
             list_line += 1;
         }
     }
+    */
 
     wnoutrefresh( w_ );
 }
@@ -241,10 +285,10 @@ int text_pane::text_width()
 
 int text_pane::num_lines()
 {
-    return folded_line_count_;
+    return output_strings_.size();
 }
 
-int text_pane::max_offset()
+size_t text_pane::max_offset()
 {
     return std::max( 0, num_lines() - getmaxy( w_ ) );
 }
