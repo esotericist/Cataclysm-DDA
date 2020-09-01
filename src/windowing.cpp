@@ -153,8 +153,8 @@ void text_pane::draw( const nc_color &base_color )
     calc_start_pos( cursor_offset_, cur_offset, w_height, output_strings_.size(),
                     input_dataset_[cursor_pos_].folded_line_count );
     size_t end_offset = cursor_offset_ + w_height;
-    if( end_offset > max_offset() ) {
-        end_offset = max_offset();
+    if( end_offset > output_strings_.size() - 1 ) {
+        end_offset = output_strings_.size() - 1;
     }
 
     if( max_offset() > 0 ) {
@@ -290,5 +290,10 @@ int text_pane::num_lines()
 
 size_t text_pane::max_offset()
 {
+    int linecount = num_lines();
+    int maxy = getmaxy( w_ );
+    if( linecount || maxy ) {
+
+    }
     return std::max( 0, num_lines() - getmaxy( w_ ) );
 }
