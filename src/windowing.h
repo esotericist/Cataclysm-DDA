@@ -111,11 +111,30 @@ class text_pane
         std::pair<std::string, std::string> cursor_text_ = { "", "" };
         std::vector<std::string> output_strings_;
         std::vector<text_pane_entry> input_dataset_;
-        size_t cursor_pos_ = 0;
         nc_color cursor_color_;
         cursor_style cursor_style_ = cursor_hidden;
         scrollbar_pos scrollbar_pos_ = scrollbar_left;
         bool wrap_cursor_ = false;
+
+        /* 
+         * the relationship between cursor_pos_ and cursor_offset_ is complicated
+         * cursor_pos_ is the currently selected entry, if applicable
+         * cursor_offset_ is the current offset from the top of the content,
+         * controlling the current span of text visible in the window
+         * 
+         * we need both because of the "centered menu scrolling" game option, and how
+         * that impacts window behavior. with it off, the current screen is 'sticky'
+         * with its current positioning, and only sides when the cursor moves against
+         * the edge of the currently displayed content.
+         * 
+         * this is why calc_start_pos takes its first argument as an integer value by
+         * reference instead of by value, to provide that 'stickiness' behavior.
+         * 
+         * eventually, we also want to take advantage of having both of these values
+         * in order to correctly handle entries larger than the viewport, but that's
+         * a more complicated problem
+         */
+        size_t cursor_pos_ = 0;
         int cursor_offset_ = 0;
 };
 
