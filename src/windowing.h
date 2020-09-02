@@ -63,10 +63,10 @@ class text_pane
             entry_default = 0,
             entry_skipped = ( 1 << 0 ),
             entry_darkened = ( 1 << 1 ),
-            entry_highlithed = ( 1 << 2 ),
-            entry_bracketed = ( 1 << 3 )
+            entry_highlighted = ( 1 << 2 ),
+            entry_bracketed = ( 1 << 3 ),
+            entry_hidden = ( 1 << 4 )
         };
-
 
         text_pane( catacurses::window &w ) : w_( w ) {
             cursor_color_ = c_white;
@@ -92,16 +92,25 @@ class text_pane
         int num_lines();
         size_t max_offset();
 
-        struct entry {
-            std::vector<std::string> content_;
-            entry_flags flags;
-            size_t folded_line_count;
+        struct text_pane_entry {
+                bool has_flag( entry_flags this_flag );
+                const std::vector<std::string> &get_content();
+
+                void add_text( std::string new_text );
+                void set_flag( entry_flags this_flag );
+                void clear_flags();
+                void clear_text();
+
+                std::vector<std::string> content_;
+                size_t folded_line_count_;
+                entry_flags flags_;
         };
+
 
         catacurses::window &w_;
         std::pair<std::string, std::string> cursor_text_ = { "", "" };
         std::vector<std::string> output_strings_;
-        std::vector<entry> input_dataset_;
+        std::vector<text_pane_entry> input_dataset_;
         size_t cursor_pos_ = 0;
         nc_color cursor_color_;
         cursor_style cursor_style_ = cursor_hidden;

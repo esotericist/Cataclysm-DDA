@@ -39,6 +39,45 @@
 #include "wcwidth.h"
 
 
+bool text_pane::text_pane_entry::has_flag( entry_flags this_flag )
+{
+    return flags_ & this_flag;
+}
+
+const std::vector<std::string> &text_pane::text_pane_entry::get_content()
+{
+    return content_;
+}
+
+/*
+size_t text_pane::text_pane_entry::get_line_count()
+{
+    return folded_line_count_;
+}
+*/
+
+void text_pane::text_pane_entry::set_flag( entry_flags this_flag )
+{
+    flags_ = static_cast<entry_flags>( flags_ | this_flag );
+}
+
+void text_pane::text_pane_entry::clear_text()
+{
+    content_.clear();
+    folded_line_count_ = 0;
+}
+
+void text_pane::text_pane_entry::clear_flags()
+{
+    flags_ = entry_default;
+}
+
+void text_pane::text_pane_entry::add_text( std::string new_text )
+{
+    content_.emplace_back( new_text );
+
+}
+
 void text_pane::set_simple_text( const std::string &text )
 {
     cursor_pos_ = 0;
@@ -46,17 +85,17 @@ void text_pane::set_simple_text( const std::string &text )
     output_strings_.clear();
     std::vector<std::string> input_entries = foldstring( text, text_width() );
 
-    text_pane::entry thisentry;
+    text_pane_entry thisentry;
     size_t i = 0;
     for( const auto &k : input_entries ) {
         thisentry.content_.emplace_back( k );
         output_strings_.emplace_back( k );
         if( k == "" ) {
             if( i++ % 4 ) {
-                thisentry.flags = entry_flags::entry_darkened;
+                thisentry.flags_ = entry_flags::entry_darkened;
                 i = 0;
             }
-            thisentry.folded_line_count = thisentry.content_.size();
+            thisentry.folded_line_count_ = thisentry.content_.size();
             input_dataset_.emplace_back( thisentry );
             thisentry.content_.clear();
         }
@@ -139,7 +178,7 @@ void text_pane::draw( const nc_color &base_color )
 
     std::vector<int> entry_lengths;
     for( const auto &e : input_dataset_ ) {
-        entry_lengths.emplace_back( e.folded_line_count );
+        entry_lengths.emplace_back( e.folded_line_count_ );
     }
     std::vector<int> entry_offsets = { 0 };
     std::partial_sum( entry_lengths.begin(), entry_lengths.end(), std::back_inserter( entry_offsets ) );
@@ -151,7 +190,7 @@ void text_pane::draw( const nc_color &base_color )
     size_t cur_offset = entry_offsets[ cursor_pos_ ];
     size_t w_height = getmaxy( w_ );
     calc_start_pos( cursor_offset_, cur_offset, w_height, output_strings_.size(),
-                    input_dataset_[cursor_pos_].folded_line_count );
+                    input_dataset_[cursor_pos_].folded_line_count_ );
     size_t end_offset = cursor_offset_ + w_height;
     if( end_offset > output_strings_.size() - 1 ) {
         end_offset = output_strings_.size() - 1;
@@ -190,10 +229,33 @@ void text_pane::draw( const nc_color &base_color )
             continue;
         }
         nc_color color = base_color;
+
         size_t current_entry = std::distance( entry_offsets.begin(),
                                               std::upper_bound( entry_offsets.begin(), entry_offsets.end(), current_line ) ) - 1;
 
-        if( current_entry == cursor_pos_ ) {
+        text_pane_entry &this_entry = input_dataset_[current_entry];
+        bool is_darkened = this_entry.has_flag( entry_darkened );
+        bool is_highlighted = this_entry.has_flag( entry_highlighted );
+        bool is_current = current_entry == cursor_pos_;
+        bool is_cursor_highlight = cursor_style_ == cursor_highlighted;
+
+        if( is_darkened ) {
+            color = c_dark_gray;
+            if( is_current && is_cursor_highlight ) {
+                color = h_dark_gray;
+            }
+        } else if( is_highlighted ) {
+            color = c_yellow;
+            if( is_current && is_cursor_highlight ) {
+                color = h_yellow;
+            }
+        } else {
+            color = c_white;
+            if( is_current && is_cursor_highlight ) {
+                color = h_white;
+            }
+        }
+        if( is_current && cursor_style_ == cursor_bracketed ) {
             print_colored_text( w_, point( 1, display_line ), cursor_color, cursor_color_, cursor_text_.first );
             print_colored_text( w_, point( right_margin, display_line ), cursor_color, cursor_color,
                                 cursor_text_.second );
