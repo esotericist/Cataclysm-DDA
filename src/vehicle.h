@@ -611,8 +611,13 @@ struct label : public point {
 };
 
 enum class autodrive_result : int {
+    // the driver successfully performed course correction or simply did nothing
+    // in order to keep going forward
     ok,
+    // something bad happened (navigation error, crash, loss of visibility, or just
+    // couldn't find a way around obstacles) and autodrive cannot continue
     abort,
+    // arrived at the destination
     finished
 };
 
@@ -880,7 +885,7 @@ class vehicle
         // Drive automatically towards some destination for one turn.
         autodrive_result do_autodrive( Character &driver );
         // Stop any kind of automatic vehicle control and apply the brakes.
-        void stop_autodriving();
+        void stop_autodriving( bool apply_brakes = true );
         /**
          *  Operate vehicle controls
          *  @param pos location of physical controls to operate (ignored during remote operation)
@@ -2022,6 +2027,7 @@ class vehicle
 
     public:
         bool is_on_ramp = false;
+        // vehicle being driven by player/npc automatically
         bool is_autodriving = false;
         bool is_following = false;
         bool is_patrolling = false;
