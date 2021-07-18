@@ -871,7 +871,7 @@ class vehicle
         tripoint get_autodrive_target() {
             return autodrive_local_target;
         }
-        void do_autodrive();
+        void do_autodrive( Character &driver );
         void stop_autodriving();
         /**
          *  Operate vehicle controls
@@ -1498,7 +1498,7 @@ class vehicle
          * @param p direction player is steering
          * @param z for vertical movement - e.g helicopters
          */
-        void pldrive( const point &p, int z = 0 );
+        void pldrive( Character &driver, const point &p, int z = 0 );
 
         // stub for per-vpart limit
         units::volume max_volume( int part ) const;
