@@ -610,6 +610,12 @@ struct label : public point {
     void serialize( JsonOut &json ) const;
 };
 
+enum class autodrive_result : int {
+    ok,
+    abort,
+    finished
+};
+
 class RemovePartHandler;
 
 /**
@@ -871,7 +877,9 @@ class vehicle
         tripoint get_autodrive_target() {
             return autodrive_local_target;
         }
-        void do_autodrive( Character &driver );
+        // Drive automatically towards some destination for one turn.
+        autodrive_result do_autodrive( Character &driver );
+        // Stop any kind of automatic vehicle control and apply the brakes.
         void stop_autodriving();
         /**
          *  Operate vehicle controls
@@ -1912,6 +1920,8 @@ class vehicle
         mutable point mass_center_precalc;
         mutable point mass_center_no_precalc;
         tripoint autodrive_local_target = tripoint_zero; // current node the autopilot is aiming for
+        class autodrive_controller;
+        std::shared_ptr<autodrive_controller> active_autodrive_controller;
 
     public:
         // Subtract from parts.size() to get the real part count.
