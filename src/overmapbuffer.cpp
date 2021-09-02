@@ -610,7 +610,7 @@ void overmapbuffer::remove_vehicle( const vehicle *veh )
     const tripoint_abs_omt omt = veh->global_omt_location();
     const overmap_with_local_coords om_loc = get_existing_om_global( omt );
     if( !om_loc.om ) {
-        debugmsg( "Can't find overmap for vehicle at %s", omt.to_string_writable() );
+        debugmsg( "Can't find overmap for vehicle at %s", omt.to_string() );
         return;
     }
     om_loc.om->vehicles.erase( veh->om_id );
@@ -621,7 +621,7 @@ void overmapbuffer::add_vehicle( vehicle *veh )
     const tripoint_abs_omt omt = veh->global_omt_location();
     const overmap_with_local_coords om_loc = get_existing_om_global( omt );
     if( !om_loc.om ) {
-        debugmsg( "Can't find overmap for vehicle at %s", omt.to_string_writable() );
+        debugmsg( "Can't find overmap for vehicle at %s", omt.to_string() );
         return;
     }
     int id = om_loc.om->vehicles.size() + 1;
