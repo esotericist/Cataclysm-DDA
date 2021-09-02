@@ -1641,7 +1641,6 @@ bool game::do_turn()
         } else {
             wait_refresh_rate = 5_minutes;
         }
-        wait_refresh_rate = 5_minutes;
     }
     if( wait_redraw ) {
         if( g->first_redraw_since_waiting_started ||
