@@ -483,7 +483,7 @@ bool vehicle::interact_vehicle_locked()
             ///\EFFECT_MECHANICS speeds up vehicle hotwiring
             int skill = player_character.get_skill_level( skill_mechanics );
             const int moves = to_moves<int>( 6000_seconds / ( ( skill > 0 ) ? skill : 1 ) );
-            tripoint target = get_map().getabs( global_pos3() ) + coord_translate( parts[0].mount );
+            tripoint target = global_square_location().raw() + coord_translate( parts[0].mount );
             player_character.assign_activity(
                 player_activity( hotwire_car_activity_actor( moves, target ) ) );
         } else if( has_security_working() && query_yn( _( "Trigger the %s's Alarm?" ), name ) ) {
@@ -552,7 +552,7 @@ std::string vehicle::tracking_toggle_string()
 void vehicle::autopilot_patrol_check()
 {
     zone_manager &mgr = zone_manager::get_manager();
-    if( mgr.has_near( zone_type_id( "VEHICLE_PATROL" ), get_map().getabs( global_pos3() ), 60 ) ) {
+    if( mgr.has_near( zone_type_id( "VEHICLE_PATROL" ), global_square_location().raw(), 60 ) ) {
         enable_patrol();
     } else {
         g->zones_manager();
@@ -586,7 +586,6 @@ void vehicle::toggle_autopilot()
             autopilot_on = false;
             is_patrolling = false;
             is_following = false;
-            is_autodriving = false;
             autodrive_local_target = tripoint_zero;
             stop_engines();
             break;
@@ -594,7 +593,6 @@ void vehicle::toggle_autopilot()
             autopilot_on = true;
             is_following = true;
             is_patrolling = false;
-            is_autodriving = true;
             start_engines();
             refresh();
         default:
