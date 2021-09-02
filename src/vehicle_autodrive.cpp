@@ -324,7 +324,7 @@ enum class collision_check_result : int {
 class vehicle::autodrive_controller
 {
     public:
-        explicit autodrive_controller( const vehicle &driven_veh, const Character &driver );
+        explicit autodrive_controller( vehicle &driven_veh, const Character &driver );
         const Character &get_driver() {
             return driver;
         }
@@ -337,7 +337,7 @@ class vehicle::autodrive_controller
         void reduce_speed();
 
     private:
-        const vehicle &driven_veh;
+        vehicle &driven_veh;
         const Character &driver;
         auto_navigation_data data;
 
@@ -660,7 +660,7 @@ bool vehicle::autodrive_controller::check_drivable( tripoint pt ) const
         if( !driver.sees( pt ) ) {
             if( !driver.is_avatar() ) {
                 return false;
-            } else if( driver.as_avatar()->get_memorized_tile( pt_abs.raw() ) == mm_submap::default_tile ) {
+            } else if( driver.as_avatar()->get_memorized_tile( pt_abs.raw() ).tile.empty() ) {
                 // apparently open air doesn't get memorized, so pretend it is or else
                 // we can't fly helicopters due to the many unseen tiles behind the driver
                 if( !( data.air_ok && here.ter( pt ) == t_open_air ) ) {
@@ -1005,7 +1005,7 @@ cata::optional<std::vector<navigation_step>> vehicle::autodrive_controller::comp
     return cata::nullopt;
 }
 
-vehicle::autodrive_controller::autodrive_controller( const vehicle &driven_veh,
+vehicle::autodrive_controller::autodrive_controller( vehicle &driven_veh,
         const Character &driver ) : driven_veh( driven_veh ), driver( driver )
 {
     data.clear();
