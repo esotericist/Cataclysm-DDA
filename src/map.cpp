@@ -71,6 +71,7 @@
 #include "mongroup.h"
 #include "monster.h"
 #include "mtype.h"
+#include "npc.h"
 #include "optional.h"
 #include "options.h"
 #include "output.h"
@@ -261,7 +262,7 @@ void map::add_vehicle_to_cache( vehicle *veh )
     }
 
     // Get parts
-    for( const vpart_reference &vpr : veh->get_all_parts() ) {
+    for( const vpart_reference &vpr : veh->get_all_parts_with_fakes() ) {
         if( vpr.part().removed ) {
             continue;
         }
@@ -574,20 +575,21 @@ vehicle *map::move_vehicle( vehicle &veh, const tripoint &dp, const tileray &fac
             if( coll.type == veh_coll_veh ) {
                 continue;
             }
-            if( coll.part > veh.part_count() ||
-                veh.part( coll.part ).removed ) {
-                continue;
-            }
+            int part_num = veh.get_non_fake_part( coll.part );
 
             const point &collision_point = veh.part( coll.part ).mount;
             const int coll_dmg = coll.imp;
+
             // Shock damage, if the target part is a rotor treat as an aimed hit.
-            if( veh.part_info( coll.part ).rotor_diameter() > 0 ) {
-                veh.damage( coll.part, coll_dmg, damage_type::BASH, true );
-            } else {
-                impulse += coll_dmg;
-                veh.damage( coll.part, coll_dmg, damage_type::BASH );
-                veh.damage_all( coll_dmg / 2, coll_dmg, damage_type::BASH, collision_point );
+            // don't try to deal damage to invalid part (probably removed or destroyed)
+            if( part_num != -1 ) {
+                if( veh.part_info( part_num ).rotor_diameter() > 0 ) {
+                    veh.damage( *this, part_num, coll_dmg, damage_type::BASH, true );
+                } else {
+                    impulse += coll_dmg;
+                    veh.damage( *this, part_num, coll_dmg, damage_type::BASH );
+                    veh.damage_all( coll_dmg / 2, coll_dmg, damage_type::BASH, collision_point );
+                }
             }
         }
 
@@ -876,21 +878,23 @@ float map::vehicle_vehicle_collision( vehicle &veh, vehicle &veh2,
         if( &veh2 != static_cast<vehicle *>( veh_veh_coll.target ) ) {
             continue;
         }
+        int coll_part = veh.get_non_fake_part( veh_veh_coll.part );
+        int target_part = veh2.get_non_fake_part( veh_veh_coll.target_part );
 
-        int parm1 = veh.part_with_feature( veh_veh_coll.part, VPFLAG_ARMOR, true );
-        if( parm1 < 0 ) {
-            parm1 = veh_veh_coll.part;
+        int coll_parm = veh.part_with_feature( coll_part, VPFLAG_ARMOR, true );
+        if( coll_parm < 0 ) {
+            coll_parm = coll_part;
         }
-        int parm2 = veh2.part_with_feature( veh_veh_coll.target_part, VPFLAG_ARMOR, true );
-        if( parm2 < 0 ) {
-            parm2 = veh_veh_coll.target_part;
+        int target_parm = veh2.part_with_feature( target_part, VPFLAG_ARMOR, true );
+        if( target_parm < 0 ) {
+            target_parm = target_part;
         }
 
-        epicenter1 += veh.part( parm1 ).mount;
-        veh.damage( parm1, dmg1_part, damage_type::BASH );
+        epicenter1 += veh.part( coll_parm ).mount;
+        veh.damage( *this, coll_parm, dmg1_part, damage_type::BASH );
 
-        epicenter2 += veh2.part( parm2 ).mount;
-        veh2.damage( parm2, dmg2_part, damage_type::BASH );
+        epicenter2 += veh2.part( target_parm ).mount;
+        veh2.damage( *this, target_parm, dmg2_part, damage_type::BASH );
     }
 
     epicenter2.x /= coll_parts_cnt;
@@ -1257,6 +1261,8 @@ bool map::displace_vehicle( vehicle &veh, const tripoint &dp, const bool adjust_
 
     veh.shed_loose_parts();
     smzs = veh.advance_precalc_mounts( dst_offset, src, dp, ramp_offset, adjust_pos, parts_to_move );
+    veh.update_active_fakes();
+
     if( src_submap != dst_submap ) {
         veh.set_submap_moved( tripoint( dst.x / SEEX, dst.y / SEEY, dst.z ) );
         auto src_submap_veh_it = src_submap->vehicles.begin() + our_i;
@@ -3704,7 +3710,7 @@ void map::bash_vehicle( const tripoint &p, bash_params &params )
 {
     // Smash vehicle if present
     if( const optional_vpart_position vp = veh_at( p ) ) {
-        vp->vehicle().damage( vp->part_index(), params.strength, damage_type::BASH );
+        vp->vehicle().damage( *this, vp->part_index(), params.strength, damage_type::BASH );
         if( !params.silent ) {
             sounds::sound( p, 18, sounds::sound_t::combat, _( "crash!" ), false,
                            "smash_success", "hit_vehicle" );
@@ -3810,7 +3816,7 @@ void map::crush( const tripoint &p )
 
     if( const optional_vpart_position vp = veh_at( p ) ) {
         // Arbitrary number is better than collapsing house roof crushing APCs
-        vp->vehicle().damage( vp->part_index(), rng( 100, 1000 ), damage_type::BASH, false );
+        vp->vehicle().damage( *this, vp->part_index(), rng( 100, 1000 ), damage_type::BASH, false );
     }
 }
 
@@ -3839,7 +3845,7 @@ void map::shoot( const tripoint &p, projectile &proj, const bool hit_items )
     const bool laser = ammo_effects.count( "LASER" );
 
     if( const optional_vpart_position vp = veh_at( p ) ) {
-        dam = vp->vehicle().damage( vp->part_index(), dam, main_damage_type, hit_items );
+        dam = vp->vehicle().damage( *this, vp->part_index(), dam, main_damage_type, hit_items );
     }
 
     const auto shoot_furn_ter = [&]( const map_data_common_t &data ) {
@@ -4758,12 +4764,13 @@ static bool process_map_items( item_stack &items, safe_reference<item> &item_ref
 
 static void process_vehicle_items( vehicle &cur_veh, int part )
 {
-    const bool washmachine_here = cur_veh.part_flag( part, VPFLAG_WASHING_MACHINE ) &&
-                                  cur_veh.is_part_on( part );
     bool washing_machine_finished = false;
-    const bool dishwasher_here = cur_veh.part_flag( part, VPFLAG_DISHWASHER ) &&
-                                 cur_veh.is_part_on( part );
-    if( washmachine_here || dishwasher_here ) {
+
+    const bool washer_here = cur_veh.is_part_on( part ) &&
+                             ( cur_veh.part_flag( part, VPFLAG_WASHING_MACHINE ) ||
+                               cur_veh.part_flag( part, VPFLAG_DISHWASHER ) );
+
+    if( washer_here ) {
         for( auto &n : cur_veh.get_items( part ) ) {
             const time_duration washing_time = 90_minutes;
             const time_duration time_left = washing_time - n.age();
@@ -4778,12 +4785,12 @@ static void process_vehicle_items( vehicle &cur_veh, int part )
                 break;
             }
         }
-        if( washing_machine_finished ) {
-            if( washmachine_here ) {
-                add_msg( _( "The washing machine in the %s has finished washing." ), cur_veh.name );
-            } else if( dishwasher_here ) {
-                add_msg( _( "The dishwasher in the %s has finished washing." ), cur_veh.name );
-            }
+        if( washing_machine_finished && !cur_veh.part_flag( part, VPFLAG_APPLIANCE ) ) {
+            //~ %1$s: Cleaner, %2$s: Name of the vehicle
+            add_msg( _( "The %1$s in the %2$s has finished washing." ), cur_veh.part( part ).name( false ),
+                     cur_veh.name );
+        } else if( washing_machine_finished ) {
+            add_msg( _( "The %1$s has finished washing." ), cur_veh.part( part ).name( false ) );
         }
     }
 
@@ -4809,8 +4816,10 @@ static void process_vehicle_items( vehicle &cur_veh, int part )
                 break;
             }
         }
-        if( autoclave_finished ) {
+        if( autoclave_finished && !cur_veh.part_flag( part, VPFLAG_APPLIANCE ) ) {
             add_msg( _( "The autoclave in the %s has finished its cycle." ), cur_veh.name );
+        } else if( autoclave_finished ) {
+            add_msg( _( "The autoclave has finished its cycle." ) );
         }
     }
 
@@ -5179,7 +5188,7 @@ std::list<item> map::use_amount( const tripoint &origin, const int range, const 
             //~ Select components from the map to consume. %d = number of components left to consume.
             imenu.title = string_format( _( "Select which component to use (%d left)" ), quantity );
             for( const item_location &loc : locs ) {
-                imenu.addentry( loc->tname() + " (" + loc.describe() + ")" );
+                imenu.addentry( loc->display_name() + " (" + loc.describe() + ")" );
             }
             imenu.query();
             if( imenu.ret < 0 || static_cast<size_t>( imenu.ret ) >= locs.size() ) {
@@ -5203,7 +5212,7 @@ std::list<item> map::use_amount( const tripoint &origin, const int range, const 
 
 static void use_charges_from_furn( const furn_t &f, const itype_id &type, int &quantity,
                                    map *m, const tripoint &p, std::list<item> &ret,
-                                   const std::function<bool( const item & )> &filter )
+                                   const std::function<bool( const item & )> &filter, bool in_tools )
 {
     if( m->has_flag( ter_furn_flag::TFLAG_LIQUIDCONT, p ) ) {
         map_stack item_list = m->i_at( p );
@@ -5247,7 +5256,7 @@ static void use_charges_from_furn( const furn_t &f, const itype_id &type, int &q
             if( !filter( furn_item ) ) {
                 return;
             }
-            if( furn_item.use_charges( type, quantity, ret, p ) ) {
+            if( furn_item.use_charges( type, quantity, ret, p, return_true<item>, nullptr, in_tools ) ) {
                 stack.erase( iter );
             } else {
                 iter->charges = furn_item.ammo_remaining();
@@ -5258,7 +5267,8 @@ static void use_charges_from_furn( const furn_t &f, const itype_id &type, int &q
 
 std::list<item> map::use_charges( const tripoint &origin, const int range,
                                   const itype_id &type, int &quantity,
-                                  const std::function<bool( const item & )> &filter, basecamp *bcp )
+                                  const std::function<bool( const item & )> &filter,
+                                  basecamp *bcp, bool in_tools )
 {
     std::list<item> ret;
 
@@ -5287,16 +5297,16 @@ std::list<item> map::use_charges( const tripoint &origin, const int range,
     }
 
     for( const tripoint &p : reachable_pts ) {
-        if( has_furn( p ) ) {
-            use_charges_from_furn( furn( p ).obj(), type, quantity, this, p, ret, filter );
+        if( accessible_items( p ) ) {
+            std::list<item> tmp = i_at( p ).use_charges( type, quantity, p, filter, in_tools );
+            ret.splice( ret.end(), tmp );
             if( quantity <= 0 ) {
                 return ret;
             }
         }
 
-        if( accessible_items( p ) ) {
-            std::list<item> tmp = i_at( p ).use_charges( type, quantity, p, filter );
-            ret.splice( ret.end(), tmp );
+        if( has_furn( p ) ) {
+            use_charges_from_furn( furn( p ).obj(), type, quantity, this, p, ret, filter, in_tools );
             if( quantity <= 0 ) {
                 return ret;
             }
@@ -5304,7 +5314,7 @@ std::list<item> map::use_charges( const tripoint &origin, const int range,
 
         const optional_vpart_position vp = veh_at( p );
         if( vp ) {
-            std::list<item> tmp = vp->vehicle().use_charges( *vp, type, quantity, filter );
+            std::list<item> tmp = vp->vehicle().use_charges( *vp, type, quantity, filter, in_tools );
             ret.splice( ret.end(), tmp );
             if( quantity <= 0 ) {
                 return ret;
@@ -5735,7 +5745,7 @@ void map::add_splatter( const field_type_id &type, const tripoint &where, int in
         if( const optional_vpart_position vp = veh_at( where ) ) {
             vehicle *const veh = &vp->vehicle();
             // Might be -1 if all the vehicle's parts at where are marked for removal
-            const int part = veh->part_displayed_at( vp->mount() );
+            const int part = veh->part_displayed_at( vp->mount(), true );
             if( part != -1 ) {
                 veh->part( part ).blood += 200 * std::min( intensity, 3 ) / 3;
                 return;
@@ -7567,6 +7577,13 @@ void map::actualize( const tripoint &grid )
             rad_scorch( pnt, time_since_last_actualize );
 
             decay_cosmetic_fields( pnt, time_since_last_actualize );
+        }
+    }
+
+    tripoint_abs_sm const sm = abs_sub + grid;
+    for( auto const &guy : overmap_buffer.get_npcs_near( sm, 0 ) ) {
+        if( guy->get_location().z() == sm.z() ) {
+            guy->shop_restock();
         }
     }
 

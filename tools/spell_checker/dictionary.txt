@@ -266,6 +266,7 @@ cannelured
 caparison
 capiche
 caprison
+carapaces
 carryin
 casehead
 castable
@@ -386,6 +387,7 @@ crosshair
 crossin
 crosstie
 croupiere
+crowdfunded
 cryomask
 crystaltender
 ctivate
@@ -408,6 +410,7 @@ d
 dagnabbit
 dambreaker
 danceable
+daspletosaurus
 datasheet
 datasheets
 datavault
@@ -421,6 +424,7 @@ deadun
 deadzone
 deathcam
 deathmobile
+deathrattle
 decelerates
 deceptived
 defatted
@@ -482,9 +486,11 @@ dragonscale
 drawknife
 driers
 drivetrain
+dromaeosaurus
 dropoff
 droppers
 druidry
+dryptosaurus
 drywalled
 dunderfuck
 dyoplosaurus
@@ -519,6 +525,8 @@ enjoyability
 envenomations
 eocs
 eoraptor
+epicuticle
+epicuticles
 eppies
 ergometer
 erlischt
@@ -920,10 +928,12 @@ kunst
 kzzz
 l
 labbit
+lactobacillus
 lajatang
 lamellar
 landshark
 langourous
+latticed
 lavrae
 lawd
 layin
@@ -942,6 +952,7 @@ leverpostej
 lewede
 leylines
 lickin
+lidded
 lifegiver
 lifestraw
 lightnin
@@ -1181,12 +1192,14 @@ oleaginous
 olors
 ompare
 omplete
+onyxes
 openable
 openair
 opengl
 openingly
 opy
 orichalcum
+ornithomimus
 orrery
 otes
 otha
@@ -1241,6 +1254,8 @@ pesquisando
 peto
 petpack
 peytral
+phelloderm
+phelloderms
 phenotypes
 phenotypical
 phenotypically
@@ -1337,6 +1352,7 @@ pushmower
 pussywillows
 pwn
 pyrolusite
+parabellum
 pyrophoric
 pyrrolidone
 q
@@ -1401,6 +1417,7 @@ reimpose
 reluctancy
 remodulator
 rended
+rearwards
 renderer
 renfaires
 rennet
@@ -1479,6 +1496,7 @@ sawteeth
 sayig
 scatterer
 scissorlimbs
+sclerotin
 scrabblin
 screecher
 screechin
@@ -1529,6 +1547,7 @@ sightedness
 siloed
 siloing
 sinensis
+sixgun
 skeletonized
 skeltal
 skirmisher
@@ -1541,7 +1560,6 @@ slamfire
 slapjack
 sld
 sleepin
-slimespring
 sludged
 sluglike
 smallmouth
@@ -1631,6 +1649,7 @@ stratoscomm
 streetfighters
 stressfully
 strobus
+struthiomimus
 stungun
 stupidass
 stylette
@@ -1732,6 +1751,7 @@ toolshelf
 topazes
 toroids
 torosaurus
+torvosaurus
 totipotent
 tourmaline
 tourmalines

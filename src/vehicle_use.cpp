@@ -530,6 +530,7 @@ void vehicle::smash_security_system()
         }
     }
     Character &player_character = get_player_character();
+    map &here = get_map();
     //controls and security must both be valid
     if( c >= 0 && s >= 0 ) {
         ///\EFFECT_MECHANICS reduces chance of damaging controls when smashing security system
@@ -539,7 +540,7 @@ void vehicle::smash_security_system()
         int rand = rng( 1, 100 );
 
         if( percent_controls > rand ) {
-            damage_direct( c, part_info( c ).durability / 4 );
+            damage_direct( here, c, part_info( c ).durability / 4 );
 
             if( parts[ c ].removed || parts[ c ].is_broken() ) {
                 player_character.controlling_vehicle = false;
@@ -550,7 +551,7 @@ void vehicle::smash_security_system()
             }
         }
         if( percent_alarm > rand ) {
-            damage_direct( s, part_info( s ).durability / 5 );
+            damage_direct( here, s, part_info( s ).durability / 5 );
             // chance to disable alarm immediately, or disable on destruction
             if( percent_alarm / 4 > rand || parts[ s ].is_broken() ) {
                 is_alarm_on = false;
@@ -971,7 +972,7 @@ bool vehicle::fold_up()
     try {
         std::ostringstream veh_data;
         JsonOut json( veh_data );
-        json.write( parts );
+        json.write( real_parts() );
         bicycle.set_var( "folding_bicycle_parts", veh_data.str() );
     } catch( const JsonError &e ) {
         debugmsg( "Error storing vehicle: %s", e.c_str() );
@@ -1418,7 +1419,7 @@ void vehicle::transform_terrain()
         } else {
             const int speed = std::abs( velocity );
             int v_damage = rng( 3, speed );
-            damage( vp.part_index(), v_damage, damage_type::BASH, false );
+            damage( here, vp.part_index(), v_damage, damage_type::BASH, false );
             sounds::sound( start_pos, v_damage, sounds::sound_t::combat, _( "Clanggggg!" ), false,
                            "smash_success", "hit_vehicle" );
         }
@@ -1487,7 +1488,7 @@ void vehicle::operate_planter()
                     here.set( loc, t_dirt, f_plant_seed );
                 } else if( !here.has_flag( ter_furn_flag::TFLAG_PLOWABLE, loc ) ) {
                     //If it isn't plowable terrain, then it will most likely be damaged.
-                    damage( planter_id, rng( 1, 10 ), damage_type::BASH, false );
+                    damage( here, planter_id, rng( 1, 10 ), damage_type::BASH, false );
                     sounds::sound( loc, rng( 10, 20 ), sounds::sound_t::combat, _( "Clink" ), false, "smash_success",
                                    "hit_vehicle" );
                 }
@@ -1664,8 +1665,17 @@ void vehicle::open_all_at( int p )
  */
 void vehicle::open_or_close( const int part_index, const bool opening )
 {
+    const auto part_open_or_close = [&]( const int parti, const bool opening ) {
+        vehicle_part &prt = parts.at( parti );
+        prt.open = opening;
+        if( prt.is_fake ) {
+            parts.at( prt.fake_part_to ).open = opening;
+        } else if( prt.has_fake ) {
+            parts.at( prt.fake_part_at ).open = opening;
+        }
+    };
     //find_lines_of_parts() doesn't return the part_index we passed, so we set it on it's own
-    parts[part_index].open = opening;
+    part_open_or_close( part_index, opening );
     insides_dirty = true;
     map &here = get_map();
     here.set_transparency_cache_dirty( sm_pos.z );
@@ -1676,9 +1686,9 @@ void vehicle::open_or_close( const int part_index, const bool opening )
         sfx::play_variant_sound( opening ? "vehicle_open" : "vehicle_close",
                                  parts[ part_index ].info().get_id().str(), 100 - dist * 3 );
     }
-    for( auto const &vec : find_lines_of_parts( part_index, "OPENABLE" ) ) {
-        for( auto const &partID : vec ) {
-            parts[partID].open = opening;
+    for( const std::vector<int> &vec : find_lines_of_parts( part_index, "OPENABLE" ) ) {
+        for( const int &partID : vec ) {
+            part_open_or_close( partID, opening );
         }
     }
 
@@ -1816,7 +1826,7 @@ void vehicle::use_washing_machine( int p )
         player_character.consume_items( detergent, 1, is_crafting_component );
 
         add_msg( m_good,
-                 _( "You pour some detergent into the washing machine, close its lid, and turn it on.  The washing machine is being filled with water from your vehicle's tanks." ) );
+                 _( "You pour some detergent into the washing machine, close its lid, and turn it on.  The washing machine is being filled from the water tanks." ) );
     }
 }
 
@@ -1873,7 +1883,7 @@ void vehicle::use_dishwasher( int p )
         player_character.consume_items( detergent, 1, is_crafting_component );
 
         add_msg( m_good,
-                 _( "You pour some detergent into the dishwasher, close its lid, and turn it on.  The dishwasher is being filled with water from your vehicle's tanks." ) );
+                 _( "You pour some detergent into the dishwasher, close its lid, and turn it on.  The dishwasher is being filled from the water tanks" ) );
     }
 }
 
@@ -2415,7 +2425,7 @@ void vehicle::interact_with( const vpart_position &vp, bool with_pickup )
         }
         case EXAMINE: {
             if( is_appliance ) {
-                g->exam_appliance( *this );
+                g->exam_appliance( *this, vp.mount() );
             } else {
                 g->exam_vehicle( *this );
             }
