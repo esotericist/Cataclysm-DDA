@@ -31,7 +31,7 @@ constexpr int MAX_ITEM_IN_VEHICLE_STORAGE = MAX_ITEM_IN_SQUARE;
 // only can wear a maximum of two of any type of clothing.
 constexpr int MAX_WORN_PER_TYPE = 2;
 
-constexpr int MAPSIZE = 11;
+constexpr int MAPSIZE = 21;
 constexpr int HALF_MAPSIZE = static_cast<int>( MAPSIZE / 2 );
 
 // SEEX/SEEY define the size of a nonant, or grid.
@@ -120,7 +120,7 @@ constexpr int MAX_SKILL = 10;
 constexpr int MAX_STAT = 14;
 
 // Maximum range at which ranged attacks can be executed.
-constexpr int RANGE_HARD_CAP = 60;
+constexpr int RANGE_HARD_CAP = 120;
 
 // Accuracy levels which a shots tangent must be below.
 constexpr double accuracy_headshot = 0.1;
